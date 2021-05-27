@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: etcd-sts
+  labels:
+    type: etcd-backup-sts
+spec:
+  serviceName: etcd-h #name of headless service
+  replicas: 2
+  selector:
+    matchLabels:
+      type: etcd-dev
+  template:
+    metadata:  
+      name: etcd
+      namespace: dev
+      labels:
+          type: etcd-dev
+    spec:
+      containers:
+        - name: etcd
+          image: ishan007/etcd_image
+          volumeMounts:
+          - mountPath: "/var"
+            name: my-claim
+  volumeClaimTemplates:
+    - metadata:
+        name: my-claim
+      spec:
+        storageClassName: manual
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 500Mi

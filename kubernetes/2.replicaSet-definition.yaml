@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: etcd-replica
+  labels:
+    type: etcd-backup-replica
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      type: etcd-dev
+  template:
+    metadata:  
+      name: etcd
+      namespace: dev
+      labels:
+          type: etcd-dev
+    spec:
+      containers:
+        - name: etcd
+          image: ishan007/etcd_image
+        - name: backup-restore
+          image: ishan007/etcdbr_image

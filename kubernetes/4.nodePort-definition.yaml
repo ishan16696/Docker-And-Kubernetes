@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd-service
+  namespace: dev
+spec:
+  type: NodePort
+  ports:
+    - port: 2379 # compulsory
+      targetPort: 2379 # optional
+      nodePort: 30008 # optional
+  selector:
+    type: etcd-dev
