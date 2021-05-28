@@ -6,10 +6,9 @@ metadata:
   labels:
     type: etcd-service
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
-    - port: 2379 # compulsory
-      targetPort: 2379 # optional
-      nodePort: 30008 # optional
+    - port: 2379 # it is the port where etcd-service is exposed.
+      targetPort: 2379 # it is the port where etcd Pods is exposed.
   selector:
     type: etcd-dev
