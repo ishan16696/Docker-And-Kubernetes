@@ -3,23 +3,42 @@ kind: StatefulSet
 metadata:
   name: etcd-sts
   labels:
-    type: etcd-backup-sts
+    type: etcd-sts
 spec:
   replicas: 2
+  serviceName: etcd-h #name of headless service
   selector:
     matchLabels:
       type: etcd-dev
   template:
-    metadata:  
-      name: etcd
-      namespace: dev
+    metadata:
+      name: etcd-dev
       labels:
-          type: etcd-dev
+        type: etcd-dev
     spec:
       containers:
-        - name: etcd
+        - name: etcd 
           image: ishan007/etcd_image
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 2379
+          livenessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - -ec
+              - ETCDCTL_API=3
+              - etcdctl
+              - get
+              - foo
         - name: backup-restore
           image: ishan007/etcdbr_image
-  serviceName: etcd-h #name of headless service
-      
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080

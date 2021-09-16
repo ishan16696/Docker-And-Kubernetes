@@ -1,3 +1,6 @@
+# ClusterIP: to group the Pods together selected by `type: etcd-dev`
+# and provides a single interface to access/communicate the Pods.
+
 apiVersion: v1
 kind: Service
 metadata:

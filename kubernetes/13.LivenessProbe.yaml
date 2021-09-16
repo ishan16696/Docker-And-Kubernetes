@@ -1,3 +1,5 @@
+# livenessProbe: to check whether the application inside the container is running as expected or not.
+
 apiVersion: v1
 kind: Pod
 metadata:
@@ -10,6 +12,11 @@ spec:
     - name: etcd
       image: ishan007/etcd_image
       livenessProbe:
-        httpGet:
-          path: /health
-          port: 2379
+        exec:
+          command:
+          - /bin/sh
+          - -ec
+          - ETCDCTL_API=3
+          - etcdctl
+          - get
+          - foo

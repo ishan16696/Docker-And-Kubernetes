@@ -1,3 +1,4 @@
+# ReadinessProbe with Pod definition
 apiVersion: v1
 kind: Pod
 metadata:
@@ -19,3 +20,44 @@ spec:
         httpGet:
           path: /healthz
           port: 8080
+
+
+---
+# ReadinessProbe with Deployment definition
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etcd-deploy
+  labels:
+    type: etcd-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      type: etcd-dev
+  template:
+    metadata:
+      name: etcd-dev
+      labels:
+        type: etcd-dev
+    spec:
+      containers:
+        - name: etcd 
+          image: ishan007/etcd_image
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 2379
+        - name: backup-restore
+          image: ishan007/etcdbr_image
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+
+# if ReadinessProbe succeed then only set k8s sets the "Ready" condition as "True".
+
+# if we want to cut-off the outside/external traffic for some Pod then 
+# keep failing the ReadinessProbe of that Pod.
+# Actually ReadinessProbe tells the kubelet whether the container inside the Pod are healthy or not.
+

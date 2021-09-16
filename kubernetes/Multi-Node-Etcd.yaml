@@ -1,0 +1,147 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd
+  labels:
+    app: etcd
+spec:
+  selector:
+    app: etcd
+  ports:
+    # Kubernetes lets you configure multiple port definitions on a Service object.
+    # When using multiple ports for a Service, you must give all of your ports names so that these are unambiguous.
+  - name: client
+    port: 2379
+    protocol: TCP
+    targetPort: client
+  - name: peer
+    port: 2380
+    protocol: TCP
+    targetPort: peer
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd-lb
+  labels:
+    app: etcd
+spec:
+  type: LoadBalancer
+  selector:
+    app: etcd
+  ports:
+   - port: 2379
+     protocol: TCP
+     targetPort: 2379
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: etcd-cm
+  labels:
+    app: etcd
+data:
+  INITIAL_CLUSTER: "etcd-0=http://etcd-0.etcd:2380,etcd-1=http://etcd-1.etcd:2380,etcd-2=http://etcd-2.etcd:2380,etcd-3=http://etcd-3.etcd:2380,etcd-4=http://etcd-4.etcd:2380"
+  INITIAL_CLUSTER_STATE: "new"
+  INITIAL_CLUSTER_TOKEN: "token-01"
+  start.sh: |-
+    #!/bin/sh
+    echo "${INITIAL_CLUSTER}"
+    etcd --data-dir /data/data.etcd \
+      --name ${POD_NAME} \
+      --initial-advertise-peer-urls=http://${POD_NAME}.etcd:2380 \
+      --listen-peer-urls=http://0.0.0.0:2380 \
+      --advertise-client-urls=http://${POD_NAME}.etcd:2379 \
+      --listen-client-urls=http://0.0.0.0:2379 \
+      --initial-cluster=${INITIAL_CLUSTER} \
+      --initial-cluster-state=${INITIAL_CLUSTER_STATE} \
+      --initial-cluster-token=${INITIAL_CLUSTER_TOKEN} \
+      --max-snapshots=0 \
+      --max-wals=0
+
+---
+
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: etcd
+  labels:
+    app: etcd
+spec:
+  replicas: 5
+  serviceName: etcd
+  selector:
+    matchLabels:
+      app: etcd
+  template:
+    metadata:
+      labels:
+        app: etcd
+    spec:
+      containers:
+      - name: backup-restore
+        image: eu.gcr.io/gardener-project/gardener/etcdbrctl:v0.14.0-dev-ff93b7f7d7241d7785fbdfdb6bdf7e3cbc8f27cd
+        command:
+        - etcdbrctl
+        - server
+        - --storage-provider=Local
+        - --schedule=0 */1 * * *
+        - --max-backups=7
+        - --defragmentation-schedule=*/5 * * * *
+      - name: etcd
+        image: ishan007/etcd_image
+        imagePullPolicy: IfNotPresent
+        command:
+        - /scripts/start.sh
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: "metadata.name"
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: "status.podIP"
+        - name: INITIAL_CLUSTER
+          valueFrom:
+            configMapKeyRef:
+              key: "INITIAL_CLUSTER"
+              name: etcd-cm #<name of config-map>
+        - name: INITIAL_CLUSTER_STATE
+          valueFrom:
+            configMapKeyRef:
+              key: "INITIAL_CLUSTER_STATE"
+              name: etcd-cm
+        - name: INITIAL_CLUSTER_TOKEN
+          valueFrom:
+            configMapKeyRef:
+              key: "INITIAL_CLUSTER_TOKEN"
+              name: etcd-cm
+        ports:
+        - containerPort: 2379
+          name: client
+          protocol: TCP
+        - containerPort: 2380
+          name: peer
+          protocol: TCP
+        volumeMounts:
+        - name: data
+          mountPath: "/data"
+        - name: etcd-start-script
+          mountPath: "/scripts"
+      volumes:
+      - name: data
+        emptyDir: {}
+      - name: etcd-start-script
+        configMap:
+          name: etcd-cm
+          defaultMode: 0755
+          items:
+          - key: start.sh
+            path: start.sh
+
+

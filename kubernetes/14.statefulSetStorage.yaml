@@ -1,35 +1,68 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd-h
+  namespace: dev
+spec:
+  clusterIP: None
+  ports:
+    - port: 2379
+  selector:
+    type: etcd-dev
+
+---
+
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: etcd-sts
+  namespace: dev
   labels:
-    type: etcd-backup-sts
+    type: etcd-sts
 spec:
-  serviceName: etcd-h #name of headless service
   replicas: 2
+  serviceName: etcd-h
   selector:
     matchLabels:
       type: etcd-dev
   template:
-    metadata:  
-      name: etcd
+    metadata:
+      name: etcd-dev
       namespace: dev
       labels:
-          type: etcd-dev
+        type: etcd-dev
     spec:
       containers:
-        - name: etcd
+        - name: etcd 
           image: ishan007/etcd_image
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 2379
+          livenessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - -ec
+              - ETCDCTL_API=3
+              - etcdctl
+              - get
+              - foo
           volumeMounts:
-          - mountPath: "/var"
-            name: my-claim
+            - mountPath: "/var"
+              name: etcd-vol
   volumeClaimTemplates:
     - metadata:
-        name: my-claim
+        name: etcd-vol
+        namespace: dev
+        labels:
+          type: etcd-vol
       spec:
-        storageClassName: manual
+        storageClassName: hostpath
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
             storage: 500Mi
+
+

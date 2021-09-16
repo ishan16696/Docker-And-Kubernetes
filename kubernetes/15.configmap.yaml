@@ -4,6 +4,8 @@ metadata:
   name: config-file
   namespace: dev
 data:
+  #<key>: <value>
+  INITIAL_CLUSTER_STATE: "new"
   etcd.conf.yaml: |-
     # Human-readable name for this member.
     name: etcd-test
