@@ -1,0 +1,8 @@
+apiVersion: coordination.k8s.io/v1
+kind: Lease
+metadata:
+  name: example-lease
+  namespace: dev
+spec:
+  leaseDurationSeconds: 60
+  holderIdentity: "member"

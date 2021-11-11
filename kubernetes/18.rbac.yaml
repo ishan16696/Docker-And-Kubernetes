@@ -1,0 +1,26 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: dev
+  name: lease-access-to-pods
+rules:
+- apiGroups: ["coordination.k8s.io"] #  indicates the API group (eg: API group of leases)
+  resources: ["leases"]
+  verbs: ["get", "watch", "list","create","delete","update","patch"]
+
+--- 
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: leases-access-binding
+  namespace: dev
+subjects:
+- kind: ServiceAccount # it can be a particular user too
+  name: lease-service-account # Name is case sensitive
+  apiGroup: ""
+  namespace: dev
+roleRef:
+  kind: Role
+  name: lease-access-to-pods # need to already have a ClusterRole named "lease-access-to-pods".
+  apiGroup: rbac.authorization.k8s.io

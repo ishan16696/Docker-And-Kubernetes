@@ -38,6 +38,17 @@ spec:
 
 ---
 apiVersion: v1
+kind: Secret
+metadata:
+  name: etcd-backup
+type: Opaque
+data:
+  accessKeyID: 
+  region: 
+  secretAccessKey: 
+
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: etcd-cm
@@ -64,7 +75,6 @@ data:
 
 ---
 
-
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -82,21 +92,66 @@ spec:
       labels:
         app: etcd
     spec:
+      serviceAccountName: lease-service-account
       containers:
       - name: backup-restore
-        image: eu.gcr.io/gardener-project/gardener/etcdbrctl:v0.14.0-dev-ff93b7f7d7241d7785fbdfdb6bdf7e3cbc8f27cd
+        image: eu.gcr.io/gardener-project/gardener/etcdbrctl:v0.14.0-dev-b0111bc56f762311f597d091045df74164b7330b
         command:
         - etcdbrctl
         - server
         - --storage-provider=Local
         - --schedule=0 */1 * * *
         - --max-backups=7
-        - --defragmentation-schedule=*/5 * * * *
+        - --defragmentation-schedule=*/9 * * * *
+        - --storage-provider=S3
+        - --store-prefix=etcd-main
+        - --compress-snapshots=true
+        - --compression-policy=gzip
+        - --enable-snapshot-lease-renewal=false 
+        - --enable-member-lease-renewal=false 
+        - --full-snapshot-lease-name=full-snap-lease
+        - --delta-snapshot-lease-name=delta-snap-lease
+        env: 
+        - name: STORAGE_CONTAINER
+          value: "ishan-etcdbr-test-bucket"
+        - name: AWS_REGION
+          valueFrom:
+            secretKeyRef:
+              key: "region"
+              name: etcd-backup
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: "secretAccessKey"
+              name: etcd-backup
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              key: "accessKeyID"
+              name: etcd-backup
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: "metadata.name"
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: "metadata.namespace"
       - name: etcd
-        image: ishan007/etcd_image
+        image: bitnami/etcd:3
         imagePullPolicy: IfNotPresent
         command:
         - /scripts/start.sh
+        # livenessProbe:
+        #   exec:
+        #     command:
+        #     - /bin/sh
+        #     - -ec
+        #     - ETCDCTL_API=3
+        #     - etcdctl
+        #     - --endpoints=http://${POD_NAME}.etcd:2379
+        #     - get
+        #     - foo
         env:
         - name: POD_NAME
           valueFrom:
@@ -110,7 +165,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               key: "INITIAL_CLUSTER"
-              name: etcd-cm #<name of config-map>
+              name: etcd-cm 
         - name: INITIAL_CLUSTER_STATE
           valueFrom:
             configMapKeyRef:
@@ -143,5 +198,4 @@ spec:
           items:
           - key: start.sh
             path: start.sh
-
 
