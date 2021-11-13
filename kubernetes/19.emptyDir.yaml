@@ -1,0 +1,34 @@
+# emptyDir is a type of ephemeral volume.
+# While a Pod is running its emptyDir exists. If a container in a Pod crashes the emptyDir content is unaffected. 
+# Deleting a Pod deletes all its emptyDirs.
+## By default: emptyDir will get created in a disk
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: etcd
+  labels:
+    name: etcd
+spec:
+  containers:
+  - name: etcd
+    image: ishan007/etcd_image
+    imagePullPolicy: IfNotPresent
+    resources:
+      limits:
+        memory: "64Mi"
+        cpu: "50m"
+    ports:
+      - containerPort: 2379
+    volumeMounts:
+      - mountPath: "/data"
+        name: vol
+  volumes:
+    - name: vol 
+      emptyDir: {}
+
+
+## check the space by exec into the pod and using $df -h
+## it will be look like this:
+## Filesystem                Size      Used Available Use% Mounted on
+## /dev/vda1                58.4G      5.8G     49.6G  10% /data

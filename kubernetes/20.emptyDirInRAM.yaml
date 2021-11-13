@@ -1,0 +1,37 @@
+## If you do not specify where to create an emptyDir , it gets created on the disk space of the Kubernetes node
+
+
+## Example: to create emptyDir in memory(RAM) 
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: etcd
+  labels:
+    name: etcd
+spec:
+  containers:
+  - name: etcd
+    image: ishan007/etcd_image
+    imagePullPolicy: IfNotPresent
+    resources:
+      limits:
+        memory: "64Mi"
+        cpu: "50m"
+    ports:
+      - containerPort: 2379
+    volumeMounts:
+      - mountPath: "/data"
+        name: vol
+  volumes:
+    - name: vol 
+      emptyDir:
+       medium: Memory     
+
+
+## check the space by exec into the pod and using $df -h
+## it will be look like this:
+## Filesystem                Size      Used Available Use% Mounted on
+## tmpfs                   992.7M         0    992.7M   0% /data
+
+## The default size of a RAM-based emptyDir is half the RAM of the node it runs on.
