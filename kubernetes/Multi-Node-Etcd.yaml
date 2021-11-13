@@ -43,9 +43,9 @@ metadata:
   name: etcd-backup
 type: Opaque
 data:
-  accessKeyID: 
-  region: 
-  secretAccessKey: 
+  accessKeyID: ""
+  region: ""
+  secretAccessKey: ""
 
 ---
 apiVersion: v1
@@ -87,6 +87,7 @@ spec:
   selector:
     matchLabels:
       app: etcd
+  #podManagementPolicy: Parallel
   template:
     metadata:
       labels:
@@ -99,7 +100,6 @@ spec:
         command:
         - etcdbrctl
         - server
-        - --storage-provider=Local
         - --schedule=0 */1 * * *
         - --max-backups=7
         - --defragmentation-schedule=*/9 * * * *
@@ -152,6 +152,12 @@ spec:
         #     - --endpoints=http://${POD_NAME}.etcd:2379
         #     - get
         #     - foo
+        # readinessProbe:
+        #   httpGet:
+        #     path: /health
+        #     port: 2379
+        #   initialDelaySeconds: 60
+        #   periodSeconds: 5
         env:
         - name: POD_NAME
           valueFrom:
@@ -198,4 +204,3 @@ spec:
           items:
           - key: start.sh
             path: start.sh
-
